@@ -39,7 +39,7 @@ func main() {
 	fmt.Println(parsedUrl)
 	for i := range *numberOfConnections {
 		fmt.Println("Running Connection number", i+1)
-		res, err := clientRunner(parsedUrl, &client)
+		res, err := clientRunner(parsedUrl.String(), &client)
 		if err != nil {
 			log.Println("Connection failed: ", i+1, "\n", err)
 			continue
@@ -52,15 +52,15 @@ func main() {
 		totalTime += float64(res.Duration.Milliseconds())
 		totalBytes += int(res.Bytes)
 	}
-	averageTime := totalTime / float64(*numberOfConnections)
+	averageTime := totalTime / float64(len(results))
 	fmt.Println("Average Time in milliseconds: ", averageTime, "ms")
 	fmt.Println("Total bytes downloaded: ", totalBytes, " bytes")
 }
 
-func clientRunner(URLvar *url.URL, client *http.Client) (*Result, error) {
+func clientRunner(URLvar string, client *http.Client) (*Result, error) {
 	var res Result
 	start := time.Now()
-	resp, err := client.Get(URLvar.String())
+	resp, err := client.Get(URLvar)
 	if err != nil {
 		return &res, err
 	}
@@ -69,6 +69,7 @@ func clientRunner(URLvar *url.URL, client *http.Client) (*Result, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
+		return &Result{}, err
 	}
 	duration := time.Since(start)
 	res.Duration = duration
