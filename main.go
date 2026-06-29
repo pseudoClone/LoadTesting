@@ -12,8 +12,11 @@ import (
 
 func main() {
 	serverURL := flag.String("s", "", "Enter server url")
+	numberOfConnections := flag.Int("n", 1,
+		"Enter the number of concurrent clients")
 	flag.Parse()
 	parsedUrl, err := url.ParseRequestURI(*serverURL)
+	client := http.Client{Timeout: 15 * time.Second}
 	/* ParseRequestURI validates URLs. Checked with:
 	go run .\main.go -s kjddksjnfds
 	go run .\main.go -s what
@@ -22,19 +25,33 @@ func main() {
 	if err != nil {
 		log.Fatalf("Invalid URL %s", err)
 	}
+	elapsedTimes := make([]time.Duration, 0, *numberOfConnections)
+	/* slice of length 0 and capacity is the numberOfConnection */
+	/* Couldn't find exact function signature,
+	had to look up in stackoverflow
+	https://stackoverflow.com/questions/36349045/how-can-the-make-function-take-three-parameters */
 	fmt.Println(parsedUrl)
-	start := time.Now()
-	fmt.Println(start)
-	if err := clientRunner(parsedUrl); err != nil {
-		log.Fatal(err)
+	for i := range *numberOfConnections {
+		fmt.Println("Running Connection number", i+1)
+		start := time.Now()
+		fmt.Println(start)
+		if err := clientRunner(parsedUrl, &client); err != nil {
+			log.Fatal(err)
+		}
+		// end := time.Now()
+		// fmt.Print("Elapsed: ", end.Sub(start), "\n")
+		elapsedTime := time.Since(start)
+		elapsedTimes = append(elapsedTimes, elapsedTime)
 	}
-	end := time.Now()
-	fmt.Print("Elapsed: ", end.Sub(start), "\n")
-	fmt.Println(time.Since(start))
+	totalTime := 0.0
+	for _, valTime := range elapsedTimes {
+		totalTime += float64(valTime.Milliseconds())
+	}
+	averageTime := totalTime / float64(*numberOfConnections)
+	fmt.Println("Average Time in milliseconds: ", averageTime, "ms")
 }
 
-func clientRunner(URLvar *url.URL) error {
-	client := http.Client{Timeout: 15 * time.Second}
+func clientRunner(URLvar *url.URL, client *http.Client) error {
 	resp, err := client.Get(URLvar.String())
 	if err != nil {
 		return err
@@ -66,3 +83,14 @@ func clientRunner(URLvar *url.URL) error {
 	} */
 	return nil
 }
+
+/*
+
+
+type Result struct {
+	StatusCode int
+	Bytes int
+	Duration time.Duration
+}
+
+*/
