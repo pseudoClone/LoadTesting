@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+type Result struct {
+	StatusCode int
+	Bytes      int
+	Duration   time.Duration
+}
+
 func main() {
 	serverURL := flag.String("s", "", "Enter server url")
 	numberOfConnections := flag.Int("n", 1,
@@ -25,7 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Invalid URL %s", err)
 	}
-	elapsedTimes := make([]time.Duration, 0, *numberOfConnections)
+	results := make([]Result, 0, *numberOfConnections)
 	/* slice of length 0 and capacity is the numberOfConnection */
 	/* Couldn't find exact function signature,
 	had to look up in stackoverflow
@@ -33,64 +39,43 @@ func main() {
 	fmt.Println(parsedUrl)
 	for i := range *numberOfConnections {
 		fmt.Println("Running Connection number", i+1)
-		start := time.Now()
-		fmt.Println(start)
-		if err := clientRunner(parsedUrl, &client); err != nil {
-			log.Fatal(err)
+		res, err := clientRunner(parsedUrl, &client)
+		if err != nil {
+			log.Println("Connection failed: ", i+1, "\n", err)
+			continue
 		}
-		// end := time.Now()
-		// fmt.Print("Elapsed: ", end.Sub(start), "\n")
-		elapsedTime := time.Since(start)
-		elapsedTimes = append(elapsedTimes, elapsedTime)
+		results = append(results, *res)
 	}
 	totalTime := 0.0
-	for _, valTime := range elapsedTimes {
-		totalTime += float64(valTime.Milliseconds())
+	totalBytes := 0
+	for _, res := range results {
+		totalTime += float64(res.Duration.Milliseconds())
+		totalBytes += int(res.Bytes)
 	}
 	averageTime := totalTime / float64(*numberOfConnections)
 	fmt.Println("Average Time in milliseconds: ", averageTime, "ms")
+	fmt.Println("Total bytes downloaded: ", totalBytes, " bytes")
 }
 
-func clientRunner(URLvar *url.URL, client *http.Client) error {
+func clientRunner(URLvar *url.URL, client *http.Client) (*Result, error) {
+	var res Result
+	start := time.Now()
 	resp, err := client.Get(URLvar.String())
 	if err != nil {
-		return err
+		return &res, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("Total Bytes Read: ", len(body))
-		fmt.Printf("%s\n", body)
+	res.StatusCode = resp.StatusCode
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
 	}
-	// fmt.Println(resp, err)
-	/* if err != nil {
-		fmt.Fprintf(os.Stderr, "\nCould not get the requested URL\n")
-		return
-	}
+	duration := time.Since(start)
+	res.Duration = duration
 
-	// print(resp.Request.Host)
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println("Error reading HTTP response body")
-			return
-		}
-		bodyString := string(bodyBytes)
-		log.Print(bodyString)
-	} */
-	return nil
+	res.Bytes = len(body)
+	// fmt.Println("Total Bytes Read: ", len(body))
+	// fmt.Printf("%s\n", body)
+
+	return &res, nil
 }
-
-/*
-
-
-type Result struct {
-	StatusCode int
-	Bytes int
-	Duration time.Duration
-}
-
-*/
