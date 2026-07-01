@@ -16,7 +16,8 @@ type Result struct {
 func ClientRunner(URLvar string, client *http.Client) (*Result, error) {
 	var res Result
 	start := time.Now()
-	resp, err := client.Get(URLvar)
+	req, _ := http.NewRequest("GET", URLvar, nil)
+	resp, err := client.Do(req)
 	if err != nil {
 		return &res, err
 	}
