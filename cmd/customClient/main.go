@@ -49,18 +49,24 @@ func main() {
 	https://stackoverflow.com/questions/36349045/how-can-the-make-function-take-three-parameters */
 	fmt.Println(parsedUrl)
 	bar := progressbar.Default(int64(*numberOfConnections), "Fetching")
+
 	for range *numberOfConnections {
 		// fmt.Println("Running Connection number", i+1)
 		go customclient.ClientRunner(parsedUrl.String(), &client, resultsCh)
 	}
 	durationSlice := make([]time.Duration, 0)
+
+	statusCounts := make(map[int]int)
+	errorCounts := make(map[string]int)
+
 	for i := 0; i < *numberOfConnections; i++ {
 		rr := <-resultsCh
 		bar.Add(1)
 		if rr.Err != nil {
-			log.Println(rr.Err)
+			errorCounts[rr.Err.Error()]++
 			continue
 		}
+		statusCounts[rr.StatusCode]++
 		results = append(results, rr.Result)
 		durationSlice = append(durationSlice, rr.Duration)
 	}
@@ -76,6 +82,21 @@ func main() {
 	// 	fmt.Println(x)
 	// }
 	slices.Sort(durationSlice)
+	for code, count := range statusCounts {
+		fmt.Printf("===========================================\n"+
+			"Status Code[%d]:\n%d responses\n"+
+			"======================================"+
+			"\n", code, count)
+	}
+
+	if len(errorCounts) > 0 {
+		for err, count := range errorCounts {
+			fmt.Printf("\n %d errors of type \n"+
+				"====================================="+
+				"\n%s\n ===========================\n",
+				count, err)
+		}
+	}
 	fmt.Println("Maximum Time Request in milliseconds: ", slices.Max(durationSlice))
 	fmt.Println("Minimum Time Request in milliseconds: ", slices.Min(durationSlice))
 	fmt.Println("p90: ", customclient.Percentile(90, durationSlice))
