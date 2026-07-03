@@ -1,7 +1,6 @@
 package customclient
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -13,20 +12,31 @@ type Result struct {
 	Duration   time.Duration
 }
 
-func ClientRunner(URLvar string, client *http.Client) (*Result, error) {
+type ReturnResult struct {
+	Result
+	Err error
+}
+
+func ClientRunner(URLvar string, client *http.Client, ch chan ReturnResult) {
+	// fmt.Println("starting request")
 	var res Result
 	start := time.Now()
-	req, _ := http.NewRequest("GET", URLvar, nil)
+	req, err := http.NewRequest("GET", URLvar, nil)
+	if err != nil {
+		ch <- ReturnResult{Result{}, err}
+		return
+	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return &res, err
+		ch <- ReturnResult{res, err}
+		return
 	}
 	defer resp.Body.Close()
 	res.StatusCode = resp.StatusCode
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err)
-		return &Result{}, err
+		ch <- ReturnResult{Result{}, err}
+		return
 	}
 	duration := time.Since(start)
 	res.Duration = duration
@@ -34,6 +44,6 @@ func ClientRunner(URLvar string, client *http.Client) (*Result, error) {
 	res.Bytes = len(body)
 	// fmt.Println("Total Bytes Read: ", len(body))
 	// fmt.Printf("%s\n", body)
-
-	return &res, nil
+	// fmt.Println("sending result")
+	ch <- ReturnResult{res, nil}
 }
