@@ -14,13 +14,26 @@ import (
 )
 
 func main() {
+
+	/* https://pkg.go.dev/net/http#hdr-Clients_and_Transports
+
+	For control over proxies, TLS configuration, keep-alives, compression,
+	and other settings, create a Transport:
+
+	*/
+	tr := &http.Transport{
+		MaxIdleConns:        1000,
+		MaxConnsPerHost:     1000,
+		MaxIdleConnsPerHost: 1000,
+	}
+
 	resultsCh := make(chan customclient.ReturnResult)
 	serverURL := flag.String("s", "", "Enter server url")
 	numberOfConnections := flag.Int("n", 1,
 		"Enter the number of concurrent clients")
 	flag.Parse()
 	parsedUrl, err := url.ParseRequestURI(*serverURL)
-	client := http.Client{Timeout: 15 * time.Second}
+	client := http.Client{Timeout: 15 * time.Second, Transport: tr}
 	/* ParseRequestURI validates URLs. Checked with:
 	go run .\main.go -s kjddksjnfds
 	go run .\main.go -s what
