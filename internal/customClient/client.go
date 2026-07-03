@@ -2,6 +2,7 @@ package customclient
 
 import (
 	"io"
+	"math"
 	"net/http"
 	"time"
 )
@@ -46,4 +47,9 @@ func ClientRunner(URLvar string, client *http.Client, ch chan ReturnResult) {
 	// fmt.Printf("%s\n", body)
 	// fmt.Println("sending result")
 	ch <- ReturnResult{res, nil}
+}
+
+func Percentile(p int, times []time.Duration) time.Duration {
+	rank := math.Round((float64(p) / 100.0) * float64(len(times)-1))
+	return times[int(rank)]
 }

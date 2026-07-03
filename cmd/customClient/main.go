@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 )
 
@@ -41,6 +42,7 @@ func main() {
 		// }
 		// results = append(results, *res)
 	}
+	durationSlice := make([]time.Duration, 0)
 	for i := 0; i < *numberOfConnections; i++ {
 		rr := <-resultsCh
 		if rr.Err != nil {
@@ -48,6 +50,7 @@ func main() {
 			continue
 		}
 		results = append(results, rr.Result)
+		durationSlice = append(durationSlice, rr.Duration)
 	}
 	totalTime := 0.0
 	totalBytes := 0
@@ -57,5 +60,13 @@ func main() {
 	}
 	averageTime := totalTime / float64(len(results))
 	fmt.Println("Average Time in milliseconds: ", averageTime, "ms")
+	for _, x := range durationSlice {
+		fmt.Println(x)
+	}
+	slices.Sort(durationSlice)
+	fmt.Println("Maximum Time Request in milliseconds: ", slices.Max(durationSlice))
+	fmt.Println("Minimum Time Request in milliseconds: ", slices.Min(durationSlice))
+	fmt.Println("p90: ", customclient.Percentile(90, durationSlice))
+	fmt.Println("p99: ", customclient.Percentile(99, durationSlice))
 	fmt.Println("Total bytes downloaded: ", totalBytes, " bytes")
 }
