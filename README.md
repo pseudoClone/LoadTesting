@@ -15,3 +15,16 @@ But going forward I am using a Go server that can handle mutiple connections at 
 ## Usage
 Build it using
 `go build -o ldtst.exe .\cmd\customClient\`
+Run it 
+`ldtst.exe -s https://google.com -n 2`
+
+# **NOTE**
+## Responsible Use
+
+This tool is intended **only for authorized load and performance testing** of systems that you own or have explicit permission to test.
+
+Do **not** use this software to target third-party services, websites, or networks without authorization. Unauthorized stress testing or denial-of-service attacks may violate applicable laws, service terms, or organizational policies.
+
+The author does not endorse or encourage the use of this tool for disruptive or malicious activities. Users are solely responsible for ensuring that their use of this software complies with all applicable laws and that they have permission to test the target systems.
+
+Use this software responsibly and at your own risk.
