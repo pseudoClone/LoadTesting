@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
 )
 
 func main() {
+	var wg sync.WaitGroup
 
 	/* https://pkg.go.dev/net/http#hdr-Clients_and_Transports
 
@@ -27,40 +29,46 @@ func main() {
 		MaxIdleConnsPerHost: 1000,
 	}
 
-	resultsCh := make(chan customclient.ReturnResult)
 	serverURL := flag.String("s", "", "Enter server url")
-	numberOfConnections := flag.Int("n", 1,
+	numWorkers := flag.Int("w", 3, "Enter the number of workers")
+	numberOfRequests := flag.Int("n", 1,
 		"Enter the number of concurrent clients")
 	flag.Parse()
 	parsedUrl, err := url.ParseRequestURI(*serverURL)
 	client := http.Client{Timeout: 15 * time.Second, Transport: tr}
-	/* ParseRequestURI validates URLs. Checked with:
-	go run .\main.go -s kjddksjnfds
-	go run .\main.go -s what
-	Both of which return invalid URL.
-	This mean, I don't have to use regex or validation myself*/
+
 	if err != nil {
 		log.Fatalf("Invalid URL %s", err)
 	}
-	results := make([]customclient.Result, 0, *numberOfConnections)
-	/* slice of length 0 and capacity is the numberOfConnection */
-	/* Couldn't find exact function signature,
-	had to look up in stackoverflow
-	https://stackoverflow.com/questions/36349045/how-can-the-make-function-take-three-parameters */
-	fmt.Println(parsedUrl)
-	bar := progressbar.Default(int64(*numberOfConnections), "Fetching")
 
-	for range *numberOfConnections {
-		// fmt.Println("Running Connection number", i+1)
-		go customclient.ClientRunner(parsedUrl.String(), &client, resultsCh)
+	fmt.Println(parsedUrl)
+	jobsCh := make(chan string, *numberOfRequests)
+	resultsCh := make(chan customclient.ReturnResult, *numberOfRequests)
+	bar := progressbar.Default(int64(*numberOfRequests), "Fetching")
+
+	for i := 1; i <= *numWorkers; i++ {
+		wg.Add(1)
+		go Worker(jobsCh, resultsCh, &wg, &client)
 	}
+
+	for i := 0; i < *numberOfRequests; i++ {
+		jobsCh <- parsedUrl.String()
+	}
+	close(jobsCh)
+
+	results := make([]customclient.Result, 0, *numberOfRequests)
+
 	durationSlice := make([]time.Duration, 0)
 
 	statusCounts := make(map[int]int)
 	errorCounts := make(map[string]int)
 
-	for i := 0; i < *numberOfConnections; i++ {
-		rr := <-resultsCh
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}() // Define and run a background routine to close result channel
+
+	for rr := range resultsCh {
 		bar.Add(1)
 		if rr.Err != nil {
 			errorCounts[rr.Err.Error()]++
@@ -78,9 +86,7 @@ func main() {
 	}
 	averageTime := totalTime / float64(len(results))
 	fmt.Println("Average Time in milliseconds: ", averageTime, "ms")
-	// for _, x := range durationSlice {
-	// 	fmt.Println(x)
-	// }
+
 	slices.Sort(durationSlice)
 	for code, count := range statusCounts {
 		fmt.Printf("===========================================\n"+
@@ -97,9 +103,20 @@ func main() {
 				count, err)
 		}
 	}
-	fmt.Println("Maximum Time Request in milliseconds: ", slices.Max(durationSlice))
-	fmt.Println("Minimum Time Request in milliseconds: ", slices.Min(durationSlice))
+	fmt.Println("Maximum Time Request in milliseconds: ",
+		slices.Max(durationSlice))
+	fmt.Println("Minimum Time Request in milliseconds: ",
+		slices.Min(durationSlice))
 	fmt.Println("p90: ", customclient.Percentile(90, durationSlice))
 	fmt.Println("p99: ", customclient.Percentile(99, durationSlice))
 	fmt.Println("Total bytes downloaded: ", totalBytes, " bytes")
+}
+
+func Worker(jobs <-chan string, results chan customclient.ReturnResult,
+	wg *sync.WaitGroup, client *http.Client) {
+	defer wg.Done()
+
+	for url := range jobs {
+		customclient.ClientRunner(url, client, results)
+	}
 }
