@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"slices"
 	"time"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 func main() {
@@ -33,18 +35,15 @@ func main() {
 	had to look up in stackoverflow
 	https://stackoverflow.com/questions/36349045/how-can-the-make-function-take-three-parameters */
 	fmt.Println(parsedUrl)
-	for i := range *numberOfConnections {
-		fmt.Println("Running Connection number", i+1)
+	bar := progressbar.Default(int64(*numberOfConnections), "Fetching")
+	for range *numberOfConnections {
+		// fmt.Println("Running Connection number", i+1)
 		go customclient.ClientRunner(parsedUrl.String(), &client, resultsCh)
-		// if err != nil {
-		// 	log.Println("Connection failed: ", i+1, "\n", err)
-		// 	continue
-		// }
-		// results = append(results, *res)
 	}
 	durationSlice := make([]time.Duration, 0)
 	for i := 0; i < *numberOfConnections; i++ {
 		rr := <-resultsCh
+		bar.Add(1)
 		if rr.Err != nil {
 			log.Println(rr.Err)
 			continue
@@ -60,9 +59,9 @@ func main() {
 	}
 	averageTime := totalTime / float64(len(results))
 	fmt.Println("Average Time in milliseconds: ", averageTime, "ms")
-	for _, x := range durationSlice {
-		fmt.Println(x)
-	}
+	// for _, x := range durationSlice {
+	// 	fmt.Println(x)
+	// }
 	slices.Sort(durationSlice)
 	fmt.Println("Maximum Time Request in milliseconds: ", slices.Max(durationSlice))
 	fmt.Println("Minimum Time Request in milliseconds: ", slices.Min(durationSlice))
