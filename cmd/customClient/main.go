@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	resultsCh := make(chan customclient.ReturnResult)
 	serverURL := flag.String("s", "", "Enter server url")
 	numberOfConnections := flag.Int("n", 1,
 		"Enter the number of concurrent clients")
@@ -33,12 +34,20 @@ func main() {
 	fmt.Println(parsedUrl)
 	for i := range *numberOfConnections {
 		fmt.Println("Running Connection number", i+1)
-		res, err := customclient.ClientRunner(parsedUrl.String(), &client)
-		if err != nil {
-			log.Println("Connection failed: ", i+1, "\n", err)
+		go customclient.ClientRunner(parsedUrl.String(), &client, resultsCh)
+		// if err != nil {
+		// 	log.Println("Connection failed: ", i+1, "\n", err)
+		// 	continue
+		// }
+		// results = append(results, *res)
+	}
+	for i := 0; i < *numberOfConnections; i++ {
+		rr := <-resultsCh
+		if rr.Err != nil {
+			log.Println(rr.Err)
 			continue
 		}
-		results = append(results, *res)
+		results = append(results, rr.Result)
 	}
 	totalTime := 0.0
 	totalBytes := 0
