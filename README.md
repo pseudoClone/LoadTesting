@@ -13,10 +13,17 @@ But going forward I am using a Go server that can handle mutiple connections at 
 > Also, Python's http.server is not handling requests good. The docs say that there is an internal buffer for request. I guess it is just creating some sort of race condition in the queue/buffer.
 
 ## Usage
-Build it using
-`go build -o ldtst.exe .\cmd\customClient\`
+Build tester using
+```bash
+go build -o ldtst.exe .\cmd\customClient\
+```
+
+Run the test server using
+```bash
+go run .\cmd\customServer
+```
 Run it 
-`ldtst.exe -s https://google.com -n 2`
+`ldtst.exe -s https://localhost:8000 -n 2`
 
 # **NOTE**
 ## Responsible Use
