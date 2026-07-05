@@ -51,18 +51,25 @@ func Print(rep *Report) {
 	}
 
 	for code, count := range rep.StatusCounts {
-		fmt.Printf("===========================================\nStatus Code[%d]:\n%d responses\n===========================================\n", code, count)
+		fmt.Printf("==========================================="+
+			"\nStatus Code[%d]:\n%d responses\n==="+
+			"========================================\n",
+			code, count)
 	}
 
 	if len(rep.ErrorCounts) > 0 {
 		for err, count := range rep.ErrorCounts {
-			fmt.Printf("\n %d errors of type \n=====================================\n%s\n ===========================\n", count, err)
+			fmt.Printf("\n %d errors of type \n"+
+				"=====================================\n%s\n"+
+				"===========================\n", count, err)
 		}
 	}
 
 	if len(durations) > 0 {
-		fmt.Println("Maximum Time Request in milliseconds: ", slices.Max(durations))
-		fmt.Println("Minimum Time Request in milliseconds: ", slices.Min(durations))
+		fmt.Println("Maximum Time Request in milliseconds: ",
+			slices.Max(durations))
+		fmt.Println("Minimum Time Request in milliseconds: ",
+			slices.Min(durations))
 		fmt.Println("p90: ", stats.Percentile(90, durations))
 		fmt.Println("p99: ", stats.Percentile(99, durations))
 	}
