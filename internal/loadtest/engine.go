@@ -13,16 +13,11 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-func Run(cfg *config.Config) {
-	tr := &http.Transport{
-		MaxIdleConns:        1000,
-		MaxConnsPerHost:     1000,
-		MaxIdleConnsPerHost: 1000,
-	}
+func Run(cfg *config.Config, tr *http.Transport) {
 	client := &http.Client{Timeout: 15 * time.Second, Transport: tr}
 
-	jobsCh := make(chan string, cfg.NumRequests)
-	resultsCh := make(chan httpClient.ReturnResult, cfg.NumRequests)
+	jobsCh := make(chan string, cfg.NumWorkers)
+	resultsCh := make(chan httpClient.ReturnResult, cfg.NumWorkers)
 	bar := progressbar.Default(int64(cfg.NumRequests), "Fetching")
 
 	var wg sync.WaitGroup
@@ -31,14 +26,28 @@ func Run(cfg *config.Config) {
 		go worker.Run(jobsCh, resultsCh, &wg, client)
 	}
 
-	for i := 0; i < cfg.NumRequests; i++ {
-		jobsCh <- cfg.URL
-	}
-	close(jobsCh)
-
 	go func() {
 		wg.Wait()
 		close(resultsCh)
+	}()
+
+	go func() {
+		if cfg.RequestsPerSecond > 0 {
+			interval := time.Second /
+				time.Duration(cfg.RequestsPerSecond)
+			ticker := time.NewTicker(interval)
+			defer ticker.Stop()
+
+			for i := 0; i < cfg.NumRequests; i++ {
+				<-ticker.C
+				jobsCh <- cfg.URL
+			}
+		} else {
+			for i := 0; i < cfg.NumRequests; i++ {
+				jobsCh <- cfg.URL
+			}
+		}
+		close(jobsCh)
 	}()
 
 	allResults := make([]httpClient.ReturnResult, 0, cfg.NumRequests)
