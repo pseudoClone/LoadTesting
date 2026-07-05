@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"httpLoadTester/internal/config"
-	"httpLoadTester/internal/httpclient"
+	"httpLoadTester/internal/httpClient"
 	"httpLoadTester/internal/reporter"
 	"httpLoadTester/internal/worker"
 
@@ -22,7 +22,7 @@ func Run(cfg *config.Config) {
 	client := &http.Client{Timeout: 15 * time.Second, Transport: tr}
 
 	jobsCh := make(chan string, cfg.NumRequests)
-	resultsCh := make(chan httpclient.ReturnResult, cfg.NumRequests)
+	resultsCh := make(chan httpClient.ReturnResult, cfg.NumRequests)
 	bar := progressbar.Default(int64(cfg.NumRequests), "Fetching")
 
 	var wg sync.WaitGroup
@@ -41,7 +41,7 @@ func Run(cfg *config.Config) {
 		close(resultsCh)
 	}()
 
-	allResults := make([]httpclient.ReturnResult, 0, cfg.NumRequests)
+	allResults := make([]httpClient.ReturnResult, 0, cfg.NumRequests)
 	for rr := range resultsCh {
 		bar.Add(1)
 		allResults = append(allResults, rr)

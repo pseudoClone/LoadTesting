@@ -5,21 +5,21 @@ import (
 	"slices"
 	"time"
 
-	"httpLoadTester/internal/httpclient"
+	"httpLoadTester/internal/httpClient"
 	"httpLoadTester/internal/stats"
 )
 
 type Report struct {
-	Results      []httpclient.Result
+	Results      []httpClient.Result
 	StatusCounts map[int]int
 	ErrorCounts  map[string]int
 	TotalBytes   int
 	TotalTimeMs  float64
 }
 
-func Aggregate(results []httpclient.ReturnResult) *Report {
+func Aggregate(results []httpClient.ReturnResult) *Report {
 	rep := &Report{
-		Results:      make([]httpclient.Result, 0, len(results)),
+		Results:      make([]httpClient.Result, 0, len(results)),
 		StatusCounts: make(map[int]int),
 		ErrorCounts:  make(map[string]int),
 	}
