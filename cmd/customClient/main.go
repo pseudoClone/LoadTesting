@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
-	loadtest.Run(cfg)
+	cfg, tr := config.Load()
+	loadtest.Run(cfg, tr)
 }
