@@ -30,14 +30,14 @@ func DoRequest(url string, client *http.Client) ReturnResult {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	bytesRead, err := io.Copy(io.Discard, resp.Body)
 	if err != nil {
 		return ReturnResult{Err: err}
 	}
 
 	res.StatusCode = resp.StatusCode
 	res.Duration = time.Since(start)
-	res.Bytes = len(body)
+	res.Bytes = int(bytesRead)
 
 	return ReturnResult{Result: res, Err: nil}
 }
