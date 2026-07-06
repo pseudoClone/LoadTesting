@@ -5,7 +5,20 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 )
+
+type HeaderFlags []string
+
+func (h *HeaderFlags) String() string {
+	return strings.Join(*h, ", ")
+}
+
+func (h *HeaderFlags) Set(value string) error {
+	*h = append(*h, value)
+	return nil
+}
 
 type Config struct {
 	URL               string
