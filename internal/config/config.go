@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -45,7 +46,17 @@ func Load() (*Config, *http.Transport) {
 	numberOfRequests := flag.Int("n", 1,
 		"Enter the number of concurrent clients")
 	rps := flag.Int("rps", 0, "Enter requests per second")
+
+	flag.Var(&headers, "H",
+		"Enter HTTP Header as -H \"Content-Type: application-json \" ")
+
+	body := flag.String("d", "", "Enter request body")
+	bodyFile := flag.String("body", "",
+		"Enter the filename of file containing request body")
+
+	method := flag.String("m", http.MethodGet, "Enter http method")
 	flag.Parse()
+	m := strings.ToUpper(*method)
 
 	if *serverURL == "" {
 		log.Fatalf("Server URL is required")
@@ -61,10 +72,61 @@ func Load() (*Config, *http.Transport) {
 		MaxIdleConnsPerHost: 1000,
 	}
 
+	headerMap, err := parseHeaders(headers)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var bodyBytes []byte
+
+	switch {
+	case *body != "" && *bodyFile != "":
+		log.Fatal("Cannot use both -d and -body flag")
+	case *body != "":
+		bodyBytes = []byte(*body)
+	case *bodyFile != "":
+		data, err := os.ReadFile(*bodyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bodyBytes = data
+	}
+	validMethods := map[string]struct{}{
+		http.MethodGet:     {},
+		http.MethodPost:    {},
+		http.MethodPut:     {},
+		http.MethodPatch:   {},
+		http.MethodDelete:  {},
+		http.MethodHead:    {},
+		http.MethodOptions: {},
+	}
+
+	if _, ok := validMethods[m]; !ok {
+		log.Fatalf("unsupported method %q", m)
+	}
+
 	return &Config{
-		URL:               *serverURL,
 		NumWorkers:        *numWorkers,
 		NumRequests:       *numberOfRequests,
 		RequestsPerSecond: *rps,
+		Request: RequestConfig{
+			Method:  m,
+			URL:     *serverURL,
+			Headers: headerMap,
+			Body:    bodyBytes,
+		},
 	}, tr
+}
+
+func parseHeaders(values []string) (map[string]string, error) {
+	headers := make(map[string]string)
+	for _, h := range values {
+		parts := strings.SplitN(h, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("Invalid Header %q", h)
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		headers[key] = value
+	}
+	return headers, nil
 }
