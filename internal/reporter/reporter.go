@@ -13,7 +13,7 @@ type Report struct {
 	Results      []httpClient.Result
 	StatusCounts map[int]int
 	ErrorCounts  map[string]int
-	TotalBytes   int
+	TotalBytes   int64
 	TotalTimeMs  float64
 }
 
@@ -29,10 +29,12 @@ func Aggregate(results []httpClient.ReturnResult) *Report {
 			rep.ErrorCounts[rr.Err.Error()]++
 			continue
 		}
-		rep.StatusCounts[rr.StatusCode]++
+
+		rep.StatusCounts[rr.Result.StatusCode]++
 		rep.Results = append(rep.Results, rr.Result)
-		rep.TotalBytes += rr.Bytes
-		rep.TotalTimeMs += float64(rr.Duration.Milliseconds())
+
+		rep.TotalBytes += rr.Result.Bytes
+		rep.TotalTimeMs += float64(rr.Result.Duration.Milliseconds())
 	}
 
 	return rep
