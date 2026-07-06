@@ -1,6 +1,8 @@
 package httpClient
 
 import (
+	"bytes"
+	"httpLoadTester/internal/config"
 	"io"
 	"net/http"
 	"time"
@@ -8,7 +10,7 @@ import (
 
 type Result struct {
 	StatusCode int
-	Bytes      int
+	Bytes      int64
 	Duration   time.Duration
 }
 
@@ -17,13 +19,22 @@ type ReturnResult struct {
 	Err error
 }
 
-func DoRequest(url string, client *http.Client) ReturnResult {
+func DoRequest(cfg *config.RequestConfig, client *http.Client) ReturnResult {
 	var res Result
 	start := time.Now()
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(
+		cfg.Method,
+		cfg.URL,
+		bytes.NewReader(cfg.Body),
+	)
 	if err != nil {
 		return ReturnResult{Err: err}
 	}
+
+	for k, v := range cfg.Headers {
+		req.Header.Set(k, v)
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return ReturnResult{Err: err}
@@ -37,7 +48,7 @@ func DoRequest(url string, client *http.Client) ReturnResult {
 
 	res.StatusCode = resp.StatusCode
 	res.Duration = time.Since(start)
-	res.Bytes = int(bytesRead)
+	res.Bytes = bytesRead
 
 	return ReturnResult{Result: res, Err: nil}
 }
