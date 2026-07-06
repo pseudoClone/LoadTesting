@@ -21,11 +21,23 @@ func (h *HeaderFlags) Set(value string) error {
 }
 
 type Config struct {
-	URL               string
 	NumWorkers        int
 	NumRequests       int
 	RequestsPerSecond int
+	Request           RequestConfig
+	/* I embedded this because so many fucking instance of
+	like 1000 fucking structs
+	*/
 }
+
+type RequestConfig struct {
+	Method  string
+	URL     string
+	Headers map[string]string
+	Body    []byte
+}
+
+var headers HeaderFlags
 
 func Load() (*Config, *http.Transport) {
 	serverURL := flag.String("s", "", "Enter server url")
