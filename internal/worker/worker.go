@@ -4,13 +4,19 @@ import (
 	"net/http"
 	"sync"
 
+	"httpLoadTester/internal/config"
 	"httpLoadTester/internal/httpClient"
 )
 
-func Run(jobs <-chan string, results chan<- httpClient.ReturnResult,
-	wg *sync.WaitGroup, client *http.Client) {
+func Run(
+	jobs <-chan struct{},
+	results chan<- httpClient.ReturnResult,
+	wg *sync.WaitGroup,
+	client *http.Client,
+	req *config.RequestConfig,
+) {
 	defer wg.Done()
-	for url := range jobs {
-		results <- httpClient.DoRequest(url, client)
+	for range jobs {
+		results <- httpClient.DoRequest(req, client)
 	}
 }
