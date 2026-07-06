@@ -16,14 +16,14 @@ import (
 func Run(cfg *config.Config, tr *http.Transport) {
 	client := &http.Client{Timeout: 15 * time.Second, Transport: tr}
 
-	jobsCh := make(chan string, cfg.NumWorkers)
+	jobsCh := make(chan struct{}, cfg.NumWorkers)
 	resultsCh := make(chan httpClient.ReturnResult, cfg.NumWorkers)
 	bar := progressbar.Default(int64(cfg.NumRequests), "Fetching")
 
 	var wg sync.WaitGroup
 	for i := 1; i <= cfg.NumWorkers; i++ {
 		wg.Add(1)
-		go worker.Run(jobsCh, resultsCh, &wg, client)
+		go worker.Run(jobsCh, resultsCh, &wg, client, &cfg.Request)
 	}
 
 	go func() {
@@ -40,11 +40,11 @@ func Run(cfg *config.Config, tr *http.Transport) {
 
 			for i := 0; i < cfg.NumRequests; i++ {
 				<-ticker.C
-				jobsCh <- cfg.URL
+				jobsCh <- struct{}{}
 			}
 		} else {
 			for i := 0; i < cfg.NumRequests; i++ {
-				jobsCh <- cfg.URL
+				jobsCh <- struct{}{}
 			}
 		}
 		close(jobsCh)
