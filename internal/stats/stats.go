@@ -5,20 +5,19 @@ import (
 	"time"
 )
 
-type Stats struct {
-	Duration    time.Duration
-	Max         time.Duration
-	Min         time.Duration
-	P90         time.Duration
-	P99         time.Duration
-	ErrorCounts map[string]int
-	StatusCount map[int]int
-}
-
 func Percentile(p int, times []time.Duration) time.Duration {
-	rank := math.Round((float64(p) / 100.0) * float64(len(times)-1))
-	return times[int(rank)]
-}
-func getAverageTime(totalTime, len float64) float64 {
-	return totalTime / len
+	if len(times) == 0 {
+		return 0
+	}
+
+	rank := int(math.Round((float64(p) / 100.0) * float64(len(times)-1)))
+
+	if rank < 0 {
+		rank = 0
+	}
+	if rank >= len(times) {
+		rank = len(times) - 1
+	}
+
+	return times[rank]
 }
